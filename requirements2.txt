@@ -1,7 +1,1 @@
-# 基盤となるライブラリ
 streamlit
-numpy
-
-# 今後視覚化（グラフ化）を導入する場合に備えて
-matplotlib
-pandas
