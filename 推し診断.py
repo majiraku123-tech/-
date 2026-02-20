@@ -2,194 +2,128 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import math
-import time
 
-# === 1. 究極のサイバーパンクUI (CSS) ===
-st.set_page_config(page_title="K-POP GENESIS ENGINE 2026", layout="wide", initial_sidebar_state="collapsed")
+# === 1. クオリティ最優先のUI設定 ===
+st.set_page_config(page_title="K-POP GENESIS 2026", layout="wide")
 
 st.markdown("""
     <style>
-    /* 全体の背景とフォント */
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@300;700&display=swap');
-    .main { background-color: #030303; color: #00f2fe; font-family: 'Noto Sans JP', sans-serif; }
-    h1, h2, h3 { font-family: 'Orbitron', 'Noto Sans JP', sans-serif; letter-spacing: 2px; text-transform: uppercase; }
-    
-    /* 診断カードの圧倒的装飾 */
-    .result-card {
-        border: 2px solid #00f2fe;
-        padding: 50px;
-        background: radial-gradient(circle, rgba(0, 242, 254, 0.1) 0%, rgba(0,0,0,0.8) 100%);
-        box-shadow: 0 0 40px rgba(0, 242, 254, 0.3), inset 0 0 20px rgba(0, 242, 254, 0.1);
-        border-radius: 10px;
-        text-align: center;
-        margin-top: 20px;
-        backdrop-filter: blur(5px);
-    }
-
-    /* ボタンのサイバー・ネオンエフェクト */
+    .main { background-color: #030303; color: #00f2fe; font-family: 'Helvetica Neue', sans-serif; }
     .stButton>button {
-        background: rgba(0, 242, 254, 0.05);
-        color: #00f2fe;
-        border: 1px solid #00f2fe;
-        font-family: 'Orbitron', monospace;
-        letter-spacing: 2px;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        width: 100%;
-        height: 4.5em;
-        font-weight: bold;
-        text-transform: uppercase;
+        background: rgba(0, 242, 254, 0.05); color: #00f2fe; border: 1px solid #00f2fe;
+        height: 4em; width: 100%; transition: 0.3s;
     }
-    .stButton>button:hover {
-        background: #00f2fe;
-        color: #030303;
-        box-shadow: 0 0 25px #00f2fe;
-        transform: scale(1.02);
+    .stButton>button:hover { background: #00f2fe; color: #030303; box-shadow: 0 0 20px #00f2fe; }
+    .result-card {
+        border: 2px solid #00f2fe; padding: 40px; background: rgba(0,0,0,0.8);
+        border-radius: 15px; text-align: center;
     }
-
-    /* システムログのコンソール風デザイン */
-    .log-container {
-        background: #0a0a0a;
-        border: 1px solid #333;
-        border-left: 3px solid #00f2fe;
-        padding: 15px;
-        height: 100%;
-        border-radius: 5px;
-    }
-    .log-text {
-        font-family: 'Courier New', Courier, monospace;
-        color: #00f2fe;
-        font-size: 0.85rem;
-        margin-bottom: 4px;
-        opacity: 0.8;
-    }
-    .log-text.latest { opacity: 1.0; font-weight: bold; text-shadow: 0 0 5px #00f2fe; }
     </style>
     """, unsafe_allow_html=True)
 
-# === 2. データベース (20組以上・多次元ベクトル) ===
-# 次元構成: [0:Sound(0:軽~10:重), 1:Concept(0:明~10:暗), 2:Scale(0:少~10:多), 3:Dance(0:歌~10:踊), 4:Era(0:過去~10:最新)]
+# === 2. アーティストデータベース (25組) ===
 ARTISTS = [
-    {"name": "aespa", "v": [9.0, 9.0, 4.0, 7.0, 6.0], "color": "#ae00ff", "desc": "KWANGYAの覇者。ハイパーポップとメタバースが交差する電脳世界の女王。"},
-    {"name": "NewJeans", "v": [2.0, 1.0, 5.0, 6.0, 5.0], "color": "#87ceeb", "desc": "時代の境界線。日常に溶け込むエモーショナルな楽曲と、計算された自然体。"},
-    {"name": "BABYMONSTER", "v": [9.0, 8.0, 7.0, 9.0, 8.0], "color": "#ff0000", "desc": "圧倒的な『実力』の暴力。YGのDNAを継承した、次世代ヒップホップの最高峰。"},
-    {"name": "MEOVV", "v": [8.0, 8.0, 5.0, 8.0, 9.0], "color": "#e0e0e0", "desc": "TEDDYプロデュースの鋭利な牙。しなやかさと重厚なビートを併せ持つカリスマ。"},
-    {"name": "IVE", "v": [4.0, 3.0, 6.0, 5.0, 5.0], "color": "#ff007f", "desc": "完成された美学。自分を愛する高潔なナルシシズムが生む、圧倒的華やかさ。"},
-    {"name": "LE SSERAFIM", "v": [7.0, 7.0, 5.0, 9.0, 5.0], "color": "#64e9ff", "desc": "恐れを知らない不屈の意志。鍛え上げられた肉体美と、限界を超えるパフォーマンス。"},
-    {"name": "izna", "v": [6.0, 7.0, 7.0, 8.0, 9.0], "color": "#f1a7e1", "desc": "2026年の最前線。過酷なサバイバルから生まれた、予測不能な化学反応と輝き。"},
-    {"name": "BLACKPINK", "v": [8.0, 9.0, 4.0, 8.0, 3.0], "color": "#ff66c4", "desc": "世界を平伏させるアイコン。最高級のラグジュアリーとガールクラッシュの到達点。"},
-    {"name": "TWICE", "v": [3.0, 2.0, 9.0, 7.0, 3.0], "color": "#ffb6c1", "desc": "大衆性の頂点。多幸感あふれるエネルギーとキャッチーなメロディで世界を魅了。"},
-    {"name": "ITZY", "v": [7.0, 8.0, 5.0, 10.0, 4.0], "color": "#ffaa00", "desc": "自己肯定感の権化。骨の髄まで響く激しいビートと、K-POP界最高峰のシンクロダンス。"},
-    {"name": "(G)I-DLE", "v": [6.0, 8.0, 5.0, 4.0, 4.0], "color": "#cc0000", "desc": "自らをプロデュースする天才たち。枠に囚われない強烈なメッセージと芸術性。"},
-    {"name": "NMIXX", "v": [8.0, 6.0, 6.0, 8.0, 5.0], "color": "#0055ff", "desc": "全員がエース級。MIXX POPという激しい展開を完璧に歌いこなす実力のバケモノ集団。"},
-    {"name": "ILLIT", "v": [2.0, 2.0, 5.0, 4.0, 8.0], "color": "#c1e1c1", "desc": "プラグンBと夢かわいいビジュアル。脳内ループが止まらない中毒性の塊。"},
-    {"name": "KISS OF LIFE", "v": [4.0, 7.0, 4.0, 3.0, 8.0], "color": "#8b0000", "desc": "Y2K R&Bの再来。セクシーで成熟したボーカルと、実力派ならではの圧倒的な余裕。"},
-    {"name": "XG", "v": [9.0, 9.0, 7.0, 9.0, 6.0], "color": "#00ffcc", "desc": "宇宙規模のスケール感。全編英語詞と異次元のラップ・ダンススキルで世界を蹂躙する。"},
-    {"name": "UNIS", "v": [5.0, 4.0, 8.0, 6.0, 8.0], "color": "#ffd700", "desc": "グローバルオーディション発。多様な個性がぶつかり合う、エネルギッシュな大所帯。"},
-    {"name": "Red Velvet", "v": [5.0, 6.0, 5.0, 4.0, 2.0], "color": "#ff0000", "desc": "予測不能なコンセプトの天才。「Red」の狂気と「Velvet」の妖艶さを操る芸術家。"},
-    {"name": "Girls' Generation", "v": [4.0, 3.0, 8.0, 6.0, 0.0], "color": "#ff66b2", "desc": "伝説の象徴。完璧なフォーメーションと大所帯の魅力を定義したK-POPのバイブル。"},
-    {"name": "2NE1", "v": [8.0, 9.0, 4.0, 7.0, 0.0], "color": "#000000", "desc": "元祖ガールクラッシュ。誰にも媚びない強さと、ステージを破壊するほどのカリスマ性。"},
-    {"name": "STAYC", "v": [3.0, 2.0, 6.0, 5.0, 5.0], "color": "#ff69b4", "desc": "全員がセンター級のビジュアルと「TEENFRESH」な魅力。生歌への強いこだわり。"}
+    {"name": "aespa", "v": [9, 9, 4, 7, 6], "color": "rgb(174, 0, 255)", "desc": "電脳世界の女王。ハイパーポップの到達点。"},
+    {"name": "NewJeans", "v": [2, 1, 5, 6, 5], "color": "rgb(135, 206, 235)", "desc": "時代の境界線。エモーショナルな自然体。"},
+    {"name": "BABYMONSTER", "v": [9, 8, 7, 9, 8], "color": "rgb(255, 0, 0)", "desc": "YGの最高傑作。圧倒的な実力の暴力。"},
+    {"name": "MEOVV", "v": [8, 8, 5, 8, 9], "color": "rgb(200, 200, 200)", "desc": "TEDDYプロデュース。しなやかさと重厚なビート。"},
+    {"name": "IVE", "v": [4, 3, 6, 5, 5], "color": "rgb(255, 0, 127)", "desc": "完成された美学。高潔なナルシシズム。"},
+    {"name": "LE SSERAFIM", "v": [7, 7, 5, 9, 5], "color": "rgb(100, 233, 255)", "desc": "恐れを知らない不屈の意志と肉体美。"},
+    {"name": "izna", "v": [6, 7, 7, 8, 9], "color": "rgb(241, 167, 225)", "desc": "2026年の最前線。サバイバルから生まれた輝き。"},
+    {"name": "BLACKPINK", "v": [8, 9, 4, 8, 2], "color": "rgb(255, 102, 196)", "desc": "世界を平伏させるガールクラッシュ。"},
+    {"name": "TWICE", "v": [3, 2, 9, 7, 2], "color": "rgb(255, 182, 193)", "desc": "大衆性の頂点。多幸感あふれるエネルギー。"},
+    {"name": "ITZY", "v": [7, 8, 5, 10, 4], "color": "rgb(255, 170, 0)", "desc": "K-POP界最高峰のシンクロダンス。"},
+    {"name": "NMIXX", "v": [8, 6, 6, 8, 5], "color": "rgb(0, 85, 255)", "desc": "MIXX POPを歌いこなすバケモノ集団。"},
+    {"name": "XG", "v": [9, 9, 7, 9, 7], "color": "rgb(0, 255, 204)", "desc": "宇宙規模のスキル。全編英語詞の衝撃。"},
+    {"name": "ILLIT", "v": [2, 2, 5, 4, 8], "color": "rgb(193, 225, 193)", "desc": "夢かわいいビジュアルとプラグンB。"},
+    {"name": "KISS OF LIFE", "v": [4, 7, 4, 3, 8], "color": "rgb(139, 0, 0)", "desc": "Y2K R&Bの再来。成熟した実力。"},
+    {"name": "STAYC", "v": [3, 2, 6, 5, 5], "color": "rgb(255, 105, 180)", "desc": "全員センター級。TEENFRESHの真髄。"},
+    {"name": "Girls' Generation", "v": [4, 3, 8, 6, 0], "color": "rgb(255, 102, 178)", "desc": "永遠のレジェンド。K-POPのバイブル。"},
+    {"name": "2NE1", "v": [8, 9, 4, 7, 0], "color": "rgb(255, 255, 0)", "desc": "元祖ガールクラッシュの伝説。"},
+    {"name": "Red Velvet", "v": [5, 6, 5, 4, 2], "color": "rgb(255, 50, 50)", "desc": "予測不能な芸術的コンセプト。"},
+    {"name": "(G)I-DLE", "v": [6, 8, 5, 4, 4], "color": "rgb(180, 0, 0)", "desc": "自らをプロデュースする天才たち。"},
+    {"name": "MAMAMOO", "v": [3, 6, 4, 2, 2], "color": "rgb(0, 212, 255)", "desc": "圧倒的な生歌とライブパフォーマンス。"},
+    {"name": "Kep1er", "v": [6, 5, 9, 8, 4], "color": "rgb(255, 204, 102)", "desc": "爆発的なシンクロダンス。"},
+    {"name": "RESCENE", "v": [3, 4, 5, 4, 9], "color": "rgb(255, 255, 255)", "desc": "「香り」を纏う、2026年の新星。"},
+    {"name": "UNIS", "v": [5, 5, 8, 6, 8], "color": "rgb(255, 215, 0)", "desc": "エネルギッシュな大所帯グループ。"},
+    {"name": "NiziU", "v": [3, 2, 9, 7, 4], "color": "rgb(255, 100, 200)", "desc": "虹のような笑顔。抜群のチームワーク。"},
+    {"name": "BABYVOX", "v": [5, 7, 5, 4, 0], "color": "rgb(100, 100, 100)", "desc": "第1・2世代の架け橋となった名グループ。"}
 ]
 
-# === 3. 診断ロジック (全10問) ===
+# === 3. 究極の15質問 ===
 QUESTIONS = [
-    {"q": "Q01. 重低音が内臓に響くような、攻撃的で激しいビートを求めている。", "dim": 0, "weight": 2.5},
-    {"q": "Q02. 休日はカフェで流れるような、チルでアコースティックなサウンドが好きだ。", "dim": 0, "weight": -2.5},
-    {"q": "Q03. 明るくキュートな笑顔より、近寄りがたいダークなカリスマに惹かれる。", "dim": 1, "weight": 2.5},
-    {"q": "Q04. 難解な芸術的コンセプトより、等身大で親しみやすい姿に共感する。", "dim": 1, "weight": -2.5},
-    {"q": "Q05. 大人数だからこそできる、万華鏡のような一糸乱れぬフォーメーションが見たい。", "dim": 2, "weight": 2.5},
-    {"q": "Q06. メンバーそれぞれの個性が際立つ、少数精鋭のグループが至高だ。", "dim": 2, "weight": -2.5},
-    {"q": "Q07. ボーカルよりも、骨が折れそうなほど激しいダンスパフォーマンスを重視する。", "dim": 3, "weight": 2.5},
-    {"q": "Q08. ダンスの激しさより、口から音源レベルの圧倒的な生歌・ラップスキルに震えたい。", "dim": 3, "weight": -2.5},
-    {"q": "Q09. K-POP黄金期の懐かしいメロディラインや、レトロな雰囲気が好きだ。", "dim": 4, "weight": -2.5},
-    {"q": "Q10. 常に最先端。2026年の誰も見たことがない最新トレンドの目撃者になりたい。", "dim": 4, "weight": 2.5},
+    {"q": "Q1. 重低音が響く、破壊的なヒップホップ・EDMが好き？", "dim": 0, "w": 3.0},
+    {"q": "Q2. 落ち着いたR&Bやアコースティック曲をよく聴く？", "dim": 0, "w": -3.0},
+    {"q": "Q3. ダークで近未来的な、ミステリアスな世界観に惹かれる？", "dim": 1, "w": 3.0},
+    {"q": "Q4. 明るくて可愛い、王道のアイドルらしさを求めている？", "dim": 1, "w": -3.0},
+    {"q": "Q5. 10人前後の大人数による迫力ある群舞が見たい？", "dim": 2, "w": 3.0},
+    {"q": "Q6. 4～5人の少数精鋭で、個性がぶつかり合うのが好き？", "dim": 2, "w": -3.0},
+    {"q": "Q7. ステージでは何よりも「ダンスのキレ」を重視する？", "dim": 3, "w": 3.0},
+    {"q": "Q8. ダンスよりも「生歌のうまさ・ラップ」に震えたい？", "dim": 3, "w": -3.0},
+    {"q": "Q9. デビューしたての「新人」を発掘するのが好き？", "dim": 4, "w": 3.5},
+    {"q": "Q10. 何年経っても色褪せない「レジェンド」に安心する？", "dim": 4, "w": -3.5},
+    {"q": "Q11. 予想できない展開の「実験的な曲」にワクワクする？", "dim": 0, "w": 1.5},
+    {"q": "Q12. メンバーに「親しみやすさ」より「カリスマ」を求める？", "dim": 1, "w": 1.5},
+    {"q": "Q13. メンバー間の「わちゃわちゃ感」が一番の癒やしだ？", "dim": 2, "w": 1.5},
+    {"q": "Q14. 2010年代のK-POP黄金期のサウンドが忘れられない？", "dim": 4, "w": -1.5},
+    {"q": "Q15. TikTokで流行るような、キャッチーな曲が好き？", "dim": 0, "w": 1.0}
 ]
 
-# === 4. システム初期化 ===
+# === 4. システムロジック ===
 if 'step' not in st.session_state:
-    st.session_state.update({'step': 0, 'v': [5.0]*5, 'logs': ["SYSTEM BOOT SEQUENCE INITIATED..."]})
+    st.session_state.update({'step': 0, 'v': [5.0]*5})
 
-def get_similarity(v1, v2):
+def get_sim(v1, v2):
     dot = sum(a*b for a, b in zip(v1, v2))
-    n1 = math.sqrt(sum(a**2 for a in v1))
-    n2 = math.sqrt(sum(b**2 for b in v2))
+    n1, n2 = math.sqrt(sum(a**2 for a in v1)), math.sqrt(sum(b**2 for b in v2))
     return dot / (n1 * n2) if n1*n2 != 0 else 0
 
-# === 5. メイン画面構築 ===
-st.markdown("<h1 style='text-align: center; color: #00f2fe; text-shadow: 0 0 10px #00f2fe;'>K-POP GENESIS ENGINE v2.6</h1>", unsafe_allow_html=True)
-st.progress(st.session_state.step / len(QUESTIONS) if st.session_state.step < len(QUESTIONS) else 1.0)
-st.divider()
+# === 5. メイン描画 ===
+st.markdown("<h1 style='text-align: center; color: #00f2fe;'>K-POP GENESIS ENGINE 2026</h1>", unsafe_allow_html=True)
+st.write(f"<p style='text-align: center;'>ANALYSIS: {st.session_state.step}/{len(QUESTIONS)}</p>", unsafe_allow_html=True)
 
-col_left, col_right = st.columns([7, 3])
-
-with col_left:
-    if st.session_state.step < len(QUESTIONS):
-        q = QUESTIONS[st.session_state.step]
-        st.write(f"<h3 style='color: #888;'>[ NEURAL_LINK_ESTABLISHED : SIGNAL {st.session_state.step + 1:02d}/{len(QUESTIONS):02d} ]</h3>", unsafe_allow_html=True)
-        st.write(f"<h2 style='margin-bottom: 30px; line-height: 1.4;'>{q['q']}</h2>", unsafe_allow_html=True)
-        
-        c1, c2 = st.columns(2)
-        if c1.button("YES / 強く同意する"):
-            st.session_state.v[q['dim']] += q['weight']
-            st.session_state.logs.append(f"> SIGNAL_{st.session_state.step + 1:02d}: POSITIVE RESPONSE LOGGED.")
+if st.session_state.step < len(QUESTIONS):
+    q = QUESTIONS[st.session_state.step]
+    st.write(f"<h2 style='text-align: center;'>{q['q']}</h2>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("YES / そう思う"):
+            st.session_state.v[q['dim']] += q['w']
             st.session_state.step += 1
             st.rerun()
-        if c2.button("NO / 同意しない"):
-            st.session_state.v[q['dim']] -= q['weight'] * 0.5 # NOの時は逆方向に少し補正
-            st.session_state.logs.append(f"> SIGNAL_{st.session_state.step + 1:02d}: NEGATIVE RESPONSE LOGGED.")
+        if st.button("NO / そう思わない"):
+            st.session_state.v[q['dim']] -= q['w'] * 0.5
             st.session_state.step += 1
             st.rerun()
-            
-    else:
-        # 診断計算フェーズ (ベクトルを0~10の範囲に正規化してエラーを防ぐ)
-        final_v = [max(0.0, min(10.0, val)) for val in st.session_state.v]
-        results = sorted([(a, get_similarity(final_v, a['v'])) for a in ARTISTS], key=lambda x: x[1], reverse=True)
-        top_a, top_s = results[0]
-        
-        st.balloons()
-        
-        # 結果カード
-        st.markdown(f"""
-            <div class="result-card" style="border-color: {top_a['color']}; box-shadow: 0 0 40px {top_a['color']}44;">
-                <h3 style="color: {top_a['color']}; letter-spacing: 3px;">SYNCHRONIZATION RATE: {top_s*100:.1f}%</h3>
-                <h1 style="font-size: 5rem; color: {top_a['color']}; text-shadow: 0 0 20px {top_a['color']}; margin: 10px 0;">{top_a['name']}</h1>
-                <p style="font-size: 1.4rem; color: #ddd; line-height: 1.6;">{top_a['desc']}</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # サイバーパンク・レーダーチャート描画
-        st.write("<br><h3 style='text-align: center;'>MULTI-DIMENSIONAL ANALYSIS</h3>", unsafe_allow_html=True)
-        df = pd.DataFrame(dict(
-            r=final_v,
-            theta=['Sound (サウンド)', 'Concept (世界観)', 'Scale (規模)', 'Performance (実力)', 'Modernity (最新性)']
-        ))
-        fig = px.line_polar(df, r='r', theta='theta', line_close=True, range_r=[0, 10])
-        fig.update_traces(fill='toself', fillcolor=f"{top_a['color']}66", line_color=top_a['color'], line_width=3)
-        fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            polar=dict(
-                bgcolor='rgba(0, 242, 254, 0.05)',
-                radialaxis=dict(visible=True, range=[0, 10], gridcolor='#333', linecolor='#333', tickfont=dict(color='#666')),
-                angularaxis=dict(gridcolor='#333', tickfont=dict(color='#00f2fe', size=14))
-            ),
-            font_color='white',
-            margin=dict(l=40, r=40, t=20, b=20)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+else:
+    # 診断実行
+    final_v = [max(0.1, min(10.0, val)) for val in st.session_state.v]
+    res = sorted([(a, get_sim(final_v, a['v'])) for a in ARTISTS], key=lambda x: x[1], reverse=True)
+    top, score = res[0]
+    
+    st.balloons()
+    st.markdown(f"""
+        <div class="result-card" style="border-color: {top['color']};">
+            <h3 style="color: {top['color']};">MATCHING RATE: {score*100:.1f}%</h3>
+            <h1 style="color: {top['color']}; font-size: 4.5rem;">{top['name']}</h1>
+            <p style="font-size: 1.3rem;">{top['desc']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # グラフ描画 (エラー回避型)
+    df = pd.DataFrame(dict(r=final_v, theta=['Sound','Concept','Scale','Skill','Era']))
+    fig = px.line_polar(df, r='r', theta='theta', line_close=True, range_r=[0,10])
+    fig.update_traces(fill='toself', line_color=top['color'])
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color='#00f2fe', polar=dict(bgcolor='rgba(0,0,0,0)'))
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # サブ推し表示
+    st.write("### サブで推すべきグループ")
+    for i in range(1, 4):
+        a, s = res[i]
+        st.write(f"**{i+1}位: {a['name']}** (適合率: {s*100:.1f}%)")
 
-with col_right:
-    st.markdown("<div class='log-container'>", unsafe_allow_html=True)
-    st.write("<h4 style='color: #00f2fe; margin-top:0;'>SYSTEM LOGS</h4>", unsafe_allow_html=True)
-    
-    # ログ表示 (最新のものほど明るく)
-    display_logs = st.session_state.logs[-15:]
-    for i, log in enumerate(display_logs):
-        css_class = "log-text latest" if i == len(display_logs) - 1 else "log-text"
-        st.markdown(f"<div class='{css_class}'>{log}</div>", unsafe_allow_html=True)
-    
-    if st.session_state.step >= len(QUESTIONS):
-        st.write("<br>", unsafe_allow_html=True)
-        if st.button("SYSTEM REBOOT"):
-            st.session_state.update({'step': 0, 'v': [5.0]*5, 'logs': ["SYSTEM REBOOTED...", "> AWAITING NEW CONNECTION..."]})
-            st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    if st.button("REBOOT SYSTEM (最初からやり直す)"):
+        st.session_state.update({'step': 0, 'v': [5.0]*5})
+        st.rerun()
